@@ -21,4 +21,4 @@ cat out/zjuthesis.fls                 \
     > out/zjuthesis.wordcnt           \
 ;
 
-texcount out/zjuthesis.wordcnt -inc
+texcount out/zjuthesis.wordcnt -inc > out/thesiscount
