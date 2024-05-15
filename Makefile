@@ -3,3 +3,6 @@
 .PHONY: zjuthesis
 zjuthesis:
 	latexmk
+
+clean:
+	rm out/*
