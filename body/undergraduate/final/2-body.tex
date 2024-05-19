@@ -8,7 +8,7 @@
 
 在这篇论文中，Wolff\cite{wolff2024greybox}等人通过将Reads-from Relation引入到模糊测试中来生成抽象调度，来代表一个等价调度集合，通过测试这个调度集合中的一个调度就可以代表整个集合。同时文章还将Reads-from作为新的反馈，利用这个度量引导模糊测试器进行后续的探索。这有利于将整体的下面将对RFF的相关核心思想进行介绍。
 
-\subsubsection{概述}
+\subsubsection{RFF概述}
 
 当前用灰盒模糊测试检测并发漏洞的工具主要有以下几个特点。首先，灰盒模糊测试器保留一个调度的集合，这个集合中的每一项都是一个调度，可以用来对多线程程序进行测试。其次，调度集合是所有调度集合的一个子集，因此模糊测试器会在每一轮测试中从这个集合中选取一个最佳的项用于进行测试。为了量化调度之间优劣关系，模糊测试器就会通过代码覆盖率反馈来量化调度是否是足够好的，目前也有许多其他形式的反馈被提出来，用于更加准确地反馈多线程程序的交错程度。
 
@@ -46,17 +46,17 @@ Reads-from Relation是这篇工作的核心概念，后面的改进都是基于�
 
 正如前面所说，定义了抽象调度及其数据结构，就可以方便地对它进行变异。因为前面定义的抽象调度是一系列抽象事件的集合，因此只需要对抽象事件的顺序或数量等进行变异，就可以进一步改变抽象调度。在文章中定义了四种变异的方式，分别是插入，交换，删除以及反向。文章的$mutate\_schedule$函数首先选取一种变异的方式，然后随机选取存在潜在矛盾的抽象事件，然后对这些矛盾的抽象事件进行变异到得到新的抽样调度，并且会保证新产生的抽象调度不会和前面的重复。
 
-\subsubsection{Reads-from反馈和调度实现}
+\subsubsection{Reads-from反馈和调度控制}
 
 本篇文章除了使用通常灰和模糊测试所使用的控制流反馈，还使用了With from信息，作为并发探索空间的反馈。 当变异后的调度中包含其他之前调度都没有的新的reads-from关系，或者一个调度导致了程序崩溃，算法就会认为这个调度是有趣的，并加入到种子集合中。并且在每次选取种子时，模糊测试器还会进一步将探索的方向偏移到那些很少出现的with from约束的调度上去。
 
 在产生了前面的抽象调度之后，模糊测试器需要利用这个调度在实际的运行时进行操作，实际的操作就是通过维持一个当前可运行指令的状态图，这个状态图通过指定相应操作的优先级来保证对应指令是否能够运行。例如对于一个特定的reads-from constraint，如果写操作和读操作都就绪，那么将读操作的优先级调低，保证先进性写操作，在进行读操作。在写操作完成之后，将读的优先级调高，并将其他对该地址写的操作的优先级调低，这样就可以保证能够按照调度的方序来运行相应的指令。这是一种稳定的实现调度的方式，能够保证在多线程的情况下，程序仍旧按照指定的运行顺序进行运行，避免了不确定性。同时，尽可能保证了低开销。
 
-\subsubsection{工具架构与实现}
+\subsubsection{RFF架构与实现}
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{rff}
+    \includegraphics[width=\linewidth]{rff_1}
     \caption{\label{fig:rff}RFF Arhitecture}
 \end{figure}
 
@@ -84,8 +84,6 @@ void on_event(event_t id) {
 \paragraph{利用插桩实现基于锁的同步}首先在原始程序的处理阶段，RFF会分析原始程序并得到所有的event（内存操作，并发原语等），然后对这些操作进行插桩，在他们的前面插入一个$on_event$\autoref{code:on_event}函数，这个函数会使用一个互斥锁GLOBAL来线性化所有的线程。具体来说，每一个线程都会被分配一个本地变量wake，来表示它当前是否可以运行。当执行到$on_event$函数时，这个函数首先会获取GLOBAL互斥锁，确保其他的线程不会在此时运行到$on_event$函数，然后$on_event$会调用schedule函数来得到下一个将会执行的线程并唤醒它，然后将当前的线程睡眠。这个过程需要一定的时间，会对程序的运行造成一定的负载，但是这个负载是可以接受的。
 
 schedule函数选择下一个将会运行的线程的算法如下。首先会根据wake变量来得到所有的可执行线程，然后在所有可执行的线程中，选择那些满足当前抽象调度的线程，具体来说就是不会违反reads-from relation的线程，最后，如果有超过一个线程，满足前面的两个条件，那么就会根据POS来随机选择一个线程。如果没有线程可以运行，那么就证明检测到了死锁。
-
-
 
 \paragraph{针对调度的模糊测试器}RFF的第二个部分是针对调度的模糊测试器，它基于AFL工具，利用了AFL的共享内存区域机制，能够在被测试程序以及模糊测试器本身之间进行高效的沟通。这里我们对AFL进行修改，使其能够对调度进行模糊测试，而非常规的输入。\ref{power}展示了模糊测试器主要行为的伪代码。这个算法首先需要一个初始的调度集合作为输入，在每一轮模糊测试的过程中，首先从当前的调度集合中选取一个调度出来，然后对它进行变异产生一个新的调度$\sigma_{mut}$，并将这个调度应用于实际的程序上进行测试，如果在运行的过程中程序崩溃或者发生了其他的错误，$\sigma_{mut}$就会被加入到会导致崩溃的调度集合中，这个集合会作为最终的输出。除此以外，如果模糊测试器检测到$\sigma_{mut}$会导致新的行为，那么这个调度会被加入到初始调度集合中，用于进行后续的模糊测试。
 
@@ -148,9 +146,10 @@ int main() {
 \end{lstlisting}
 \end{spacing}
 
+% 下面是PERIOD的部分
 \subsection{PERIOD}
 
-\subsubsection{概述}
+\subsubsection{PERIOD概述}
 
 正如前文所提到的，当前利用模糊测试挖掘并发漏洞的研究已经有了通用的流程，但是对于一些关键的问题仍然没有解决。比如多线程交错空间往往很大，但是能够导致并发错误的调度往往只占其中的很小一部分。在这么大的空间中，找到那一小部分调度是一个很关键的问题。再比如，在实际运行程序进行测试的过程中，如何根据一个已有的调度信息去控制多线程程序，按照相应的调度运行。这篇文章主要针对其中的两个问题：
 
@@ -217,7 +216,7 @@ if(!--waiters){
 \end{lstlisting}
 \end{spacing}
 
-\subsubsection{Periodical Executor}
+\subsubsection{周期执行器}
 
 这篇文章要解决的第二个问题是基于生成的调度，在实际测试程序时，将多线程程序的运行序列化。前面提到之前的工作，可能会和原本程序的机制产生冲突，进而导致不可预知的情况发生。这篇文章使用了周期性的执行机制，它基于linux的Deadline任务调度，通过在每一个key point点之前设置$sched_yield$函数，在执行到这个函数时，会将当前线程挂起并执行其他线程。PERIOD会分配一个生命周期，每个period的生命周期都足够长来覆盖任何period中的关键点。当生命周期结束时，一个周期的执行也就结束了。
 
@@ -229,17 +228,17 @@ if(!--waiters){
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{period_arch}
+    \includegraphics[width=\linewidth]{period}
     \caption{\label{fig:period_arch}PERIOD Architecture}
 \end{figure}
 
-整个系统算法的设计如算法一所示，它的输入是一个待测的程序以及一个，预设的period界限，输出是一系列的bug以及它们对应的调度。在算法运行前，将会对待测试程序进行插装处理，以便在运行过程中获取必要的信息以及控制程序的调度。算法首先会产生一系列的jobs每个job对应一个线程，每一个job都包含一个d kps和一个调度前缀。调度前缀是为了记录前面的探索，并指导后面探索的方向。初始job的d kps只有一个关键点切片以及一个空的前缀调度。Period将会从只有一个切片开始，逐渐加深探索的深度，直到探索深度达到p位置。对于每一个Job以及每一个period数p，Period首先生成所有的调度，然后利用执行器测试所有的调度并记录是否产生bug。同时，执行器也会记录执行过程中产生的关键点切片信息，反馈分析器可以利用这些信息来决定是否应该产生一个新的job来探索对应调度的更深层。如果一个调度不是有趣的，或者说深度已经超过上限，那么这些Job就会被舍弃，不会再继续进行探索。
+整个系统算法的设计如算法一\autoref{period}所示，它的输入是一个待测的程序以及一个，预设的period界限，输出是一系列的bug以及它们对应的调度。在算法运行前，将会对待测试程序进行插装处理，以便在运行过程中获取必要的信息以及控制程序的调度。算法首先会产生一系列的jobs每个job对应一个线程，每一个job都包含一个d kps和一个调度前缀。调度前缀是为了记录前面的探索，并指导后面探索的方向。初始job的d kps只有一个关键点切片以及一个空的前缀调度。Period将会从只有一个切片开始，逐渐加深探索的深度，直到探索深度达到p位置。对于每一个Job以及每一个period数p，Period首先生成所有的调度，然后利用执行器测试所有的调度并记录是否产生bug。同时，执行器也会记录执行过程中产生的关键点切片信息，反馈分析器可以利用这些信息来决定是否应该产生一个新的job来探索对应调度的更深层。如果一个调度不是有趣的，或者说深度已经超过上限，那么这些Job就会被舍弃，不会再继续进行探索。
 
 \begin{algorithm}[!ht]
 % \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 % \renewcommand{\algorithmicensure}{\textbf{Output:}}
 \caption{Algorithm 1}
-\label{power}
+\label{period}
 \begin{algorithmic}[1]
     \REQUIRE  Initial corpus of schedules $S_{init}$; % input 的内容
     % \ENSURE $\mathbf{Q}$; % output 的内容
@@ -261,9 +260,10 @@ if(!--waiters){
 \end{algorithmic}  
 \end{algorithm}
 
+% PCT部分介绍
 \subsection{PCT}
 
-\subsubsection{概述}
+\subsubsection{PCT概述}
 
 Probabilistic Concurrency Testing是一种用于挖掘并发漏洞的随机算法。和前面的方法类似，这种方法同样是尝试将可能的输入减少，达到提高效率的目的。具体来说，它通过给定的线程数量，步骤数量以及漏洞深度（能够发现漏洞的最小调度限制数量）来对交错空间进行探索。同时，利用随机生成的算法，在数学上证明可以以稳定的概率发现漏洞。
 
@@ -279,39 +279,51 @@ PCT是一种可以以最低概率检测并发漏洞的方法，它是基于优�
 \item 按照优先级来执行线程。当一个线程到达了相应的改变点$k_i$，将相应的优先级值$i$赋给对应的线程。然后调度器会决定下一个执行的线程并运行它。
 \end{enumerate}
 
-这里的随机调度器保证了\textbf{给定一个有n个线程、k条指令的程序，PCT可以以$\frac{1}{nk^{d-1}}$的最低概率发现深度为$d$的bug}
+这里的随机调度器保证了\textbf{给定一个有n个线程、k条指令的程序，PCT可以以$\frac{1}{nk^{d-1}}$的最低概率发现深度为$d$的bug}。
 
 \subsubsection{PCT架构与实现}
+
+\autoref{pct_arch}展示了PCT的整体算法流程。对于给定的程序P，以及相应的参数n, k, d，然后随机生成变量$k_1, \cdots, k_{d-1} \in \{1, \cdots, k\}$。首先利用随机值为每一个线程分配初始的优先级，并将当前的调度储存在S变量中。在每一次循环中，选取当前优先级最大的线程并执行，在运行的过程中不断检测当前是否到了下一个改变点，当到达检测点时，就改变当前线程的优先级，并开始下一轮的循环。这个循环会一直持续，直到没有线程可以被选择来运行，这可能是由于程序运行结束，也有可能是由于在程序运行过程中产生了死锁。产生死锁可能意味着当前的程序可能存在其他问题。
 
 \begin{algorithm}[!ht]
 % \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 % \renewcommand{\algorithmicensure}{\textbf{Output:}}
-\caption{Algorithm 1}
-\label{power}
+\caption{Algorithm 2}
+\label{pct_arch}
 \begin{algorithmic}[1]
-    \REQUIRE  Initial corpus of schedules $S_{init}$; % input 的内容
-    % \ENSURE $\mathbf{Q}$; % output 的内容
-    需要根据具体的代码修改
-    \STATE $S \leftarrow S_{init}, S_{fail} \leftarrow \emptyset$
-    \IF {$S = \emptyset$} \STATE $S \leftarrow {\epsilon}$;
-    \ENDIF
-    \REPEAT
-        \STATE $(\sigma, \eta) \leftarrow PickNextAndAssignEnergy(S)$
-        \FOR {$i \in \{1, \cdots, \eta_{\sigma}\}$}
-            \STATE $\sigma_{mut} \leftarrow mutateSchedule(\sigma, S)$
-            \IF {$\sigma_{mut}\ crashes$} \STATE $S_{fail} \leftarrow S_{fail} \cup \{\sigma_{mut}\}$
-            \ENDIF
-            \IF {$isInteresting(\sigma_{mut}, S)$} \STATE $S \leftarrow S \cup \{\sigma_{mut}\}$
+    \REQUIRE $program \ P,d \ge 0$
+    \REQUIRE $n\ge maxthreads(P), k\ge maxsteps(P)$
+    \REQUIRE $\mathbf{random\ variables}\ k_{1},…,k_{d-1}\in \{1,…,k\}$
+    \REQUIRE $\mathbf{random\ variable}\ \pi\in Permutations(n)$
+    % \STATEX
+    % \PROCEDURE {$RandS$}{$u$, $d$, $k$}
+    \STATE $\mathbf{var}\ S:schedule$
+    \STATE $\mathbf{var}\ p:\mathbf{array}[n]\ \mathbf{of}\ N$
+    \STATE $S\leftarrow\epsilon $
+    \STATE $//\ set\ initial\ priorities$
+    \FOR{$t \in \{1, \cdots ,n\}$}
+        \STATE $p[t]\leftarrow d+\pi (t)-1$
+    \ENDFOR
+    \WHILE{$en_{P}(S)\neq\phi $}
+        \STATE $/*schedule \ thread \ of \ maximal \ priority*/$
+        \STATE $t\leftarrow element \ of \ en_{P}(S) \ such\ that \ p[t] \ maximal$
+        \STATE $S\leftarrow \ S \ t$
+        \STATE $/*are \ we \ at \ priority \ change \ point?*/$
+        \FOR{$i\in \{1,\cdots,d-1\}$}         
+            \IF{$length(S)=k_{i}$}
+                \STATE $p[t]=d-i$
             \ENDIF
         \ENDFOR
-    \UNTIL {timeout}
-    \RETURN {$S_{fail}$}
+    \ENDWHILE
+    \STATE $\mathbf{return} \ S$
 \end{algorithmic}  
 \end{algorithm}
 
 \subsubsection{示例}
 
-但是当现在的数量超过两个的时候，最低的概率可能就不再是1/2，。因为在这种情况下，即使线程2的优先级比线程2更高，但是进程2可能因为需要获取锁或其他的情况，导致被线程3阻塞，而线程3优先级比线程1更低，那么在这种情况下，线程1就可能在线程2之前运行，也就导致无法触发并发漏洞的情况。但是当线程1的优先级为所有线程中最低时，无论线程2是否被其他线程阻塞，线程1都不可能在线程2之前执行。
+如\autoref{fig:pct_example}所示，首先当这里只有两个线程的时候，如果PCT首先将线程2的优先级设置得比线程1更高，就会触发对应的bug，因此这个概率是$\frac{1}{2}$，也就是说，PCT最多尝试两轮就可以发现这个bug。
+
+但是当线程的数量超过两个的时候，最低的概率可能就不再是1/2，。因为在这种情况下，即使线程2的优先级比线程1更高，但是线程2可能因为需要获取锁或其他的情况，导致被线程3阻塞，而线程3优先级比线程1更低，那么在这种情况下，线程1就可能在线程2之前运行，也就导致无法触发并发漏洞的情况。但是当线程1的优先级为所有线程中最低时，无论线程2是否被其他线程阻塞，线程1都不可能在线程2之前执行。
 
 当bug的深度超过1时，算法需要做更多的尝试来触发相应的漏洞。只有线程2在两个操作之间发生了优先级的改变，才有可能导致线程1的指令在线程2两个指令之间执行。那么，程序优先级改变点在线程2的两个指令之间的可能性为$\frac{1}{k}$，除此以外，还需要保证线程1在线程二2执行到第一条指令之前，都必须是最低的优先级，因此，找到这个并发漏洞的概率为$\frac{1}{nk}$。
 
@@ -319,13 +331,13 @@ PCT是一种可以以最低概率检测并发漏洞的方法，它是基于优�
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{pct_example}
+    \includegraphics[width=\linewidth]{pct_example_1}
     \caption{\label{fig:pct_example}Bugs for Different Depth}
 \end{figure}
 
 \subsection{POS}
 
-\subsubsection{概述}
+\subsubsection{POS概述}
 
 \textit{Partial order sampling} (POS)是一种用于进行并发漏洞检测的方法，同样是基于优先级分配的事件调度，相比于Section3.3提到的PCT的随机采样方法，POS通过建模排序约束为二分图，并计算这些约束可通过随即优先级分配得到满足的概率，利用这些概率选取下一个event。
 
@@ -345,32 +357,41 @@ PCT是一种可以以最低概率检测并发漏洞的方法，它是基于优�
 
 但PCT并没有考虑到事件的偏序关系，因此其中有很多的冗余。如\autoref{fig:pct_buzu}(b)所示，如果没有考虑barrier()的效果，PCT会尝试延迟A1或者B1，但是这并不会对结果产生影响。除此以外，对于A2,B2,A3,B3这四个事件，PCT可能会尝试$A2 \rightarrow A3 \rightarrow B2 \rightarrow B3$和$A2 \rightarrow B2 \rightarrow A3 \rightarrow B3$两种交错方式，但是实际上这两种交错方式是等价的，因此造成了冗余测试，进而降低PCT的效率。
 
-\subsubsection{POS框架与设计}
+为了解决这些不足，POS基于数据约束关系对并发程序的执行顺序进行探索，提升了错误检测的效率。具体来说，首先POS会对多线程程序中的每一个程序进行静态分析，得到一系列的event，每一个event被分配了一个优先级，当执行到这个event的时候，POS会将event所在的线程的优先级设置为event的优先级。因此POS首先分析events之间的依赖关系，然后通过为他们设置不同的优先级来测试这些关系的不同顺序是否能够正确执行。
+
+\subsubsection{POS架构与实现}
+
+如\autoref{pos_arch}所示，POS的整体架构通过一个循环完成，每一次循环选取一个当前可以执行的优先级高的event执行，直到没有可以执行的event为止。这里面需要对不同events之间是否有冲突进行检测，如果一个event和当前将要执行的event之间确实有冲突，那么相应的event就会放到下一轮执行，这样可以提高产生冲突的概率。
+
+具体来说，在每一轮开始的时候，首先POS会选取当前所有可以执行的event，如果当前的event没有位于priority集合中，就为其随机赋优先级并加入到$pri$集合中，并从这个集合中选取优先级最高的，作为本次运行的event。然后检测当前的$pri$集合中的与当前event冲突的events，并将他们从$pri$集合中剔除，作为后面运行的待选项。
 
 \begin{algorithm}[!ht]
 % \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 % \renewcommand{\algorithmicensure}{\textbf{Output:}}
-\caption{Algorithm 1}
-\label{power}
+\caption{Algorithm 1 procedure }
+\label{pos_arch}
 \begin{algorithmic}[1]
-    \REQUIRE  Initial corpus of schedules $S_{init}$; % input 的内容
+    \REQUIRE  s: the initial state of the program
     % \ENSURE $\mathbf{Q}$; % output 的内容
-    需要根据具体的代码修改
-    \STATE $S \leftarrow S_{init}, S_{fail} \leftarrow \emptyset$
-    \IF {$S = \emptyset$} \STATE $S \leftarrow {\epsilon}$;
-    \ENDIF
-    \REPEAT
-        \STATE $(\sigma, \eta) \leftarrow PickNextAndAssignEnergy(S)$
-        \FOR {$i \in \{1, \cdots, \eta_{\sigma}\}$}
-            \STATE $\sigma_{mut} \leftarrow mutateSchedule(\sigma, S)$
-            \IF {$\sigma_{mut}\ crashes$} \STATE $S_{fail} \leftarrow S_{fail} \cup \{\sigma_{mut}\}$
+    \STATE $pri \leftarrow [\epsilon \mapsto -\infty ]$
+    \WHILE{$s.Enable()\neq \emptyset$}
+        \STATE $e^* \leftarrow \epsilon$
+        \FOR{$e \in s.Enabled()$}
+            \IF{$e \notin pri$}
+                \STATE $newPriority \leftarrow \mu(0, 1)$
+                \STATE $pri \leftarrow pri[e \mapsto newPriority]$
             \ENDIF
-            \IF {$isInteresting(\sigma_{mut}, S)$} \STATE $S \leftarrow S \cup \{\sigma_{mut}\}$
+            \IF{$pri(e^*) < pri(e)$}
+                \STATE $e^* \leftarrow e$
             \ENDIF
         \ENDFOR
-    \UNTIL {timeout}
-    \RETURN {$S_{fail}$}
+        \FOR{$e \in s.Enabled()$}
+            \IF{$e \neq e^* \wedge s.IsRacing(e, e^*)$}
+                \STATE $pri \leftarrow pri \textbackslash \{e\}$
+            \ENDIF
+        \ENDFOR
+        \STATE $s \leftarrow s.Execute(e^*)$
+    \ENDWHILE
+    \RETURN {$s$}
 \end{algorithmic}  
 \end{algorithm}
-
-% \subsection{RFF与其他工具的比较}

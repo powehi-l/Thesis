@@ -3,8 +3,31 @@
     \bfseries \zihao{3} 摘~要
 \end{center}
 
+随着计算机科学的不断发展，人们对于计算机的性能要求越来越高，因此并发编程模式和多核处理器自然被提出。并发编程和多核处理器相结合有助于大大加快程序的运行速度。但是随之而来的是多线程程序的问题，即有可能导致数据竞争等问题，进而可能造成程序出错乃至产生漏洞等严重后果。同时并发漏洞往往需要两个及以上的线程在特定位置进行交错才能触发，这导致其很难发现，即使检测到了并发错误也很难重现并漏洞产生的原因。当前模糊测试技术在需要常规输入的程序上能够发现很多漏洞，但是当前的研究很少关注到线程的交错执行方面。因此本文主要研究利用模糊测试对并发程序的交错空间进行探索以发现并发漏洞。
+
+% \begin{enumerate}
+% \item 基于数据约束的交错空间建模。并发漏洞往往需要多个线程进行特定的读写来触发，因此通过数据约束可以对不同的调度进行归类，进而减少需要探索的交错空间。
+% \item 针对并发漏洞空间的模糊测试。通过对交错空间建模，生成调度信息，模糊测试器利用调度信息运行多线程程序并得到反馈（是否出现bug，运行信息等）。
+% \end{enumerate}
+
+本文基于数据约束和模糊测试等技术，实现了当前检测并发漏洞的先进工具RFF。本工具利用数据约束构建多线程程序的调度，并将满足相同约束的调度合并为一个抽象调度类，从而缩减需要探索的多线程交错空间的大小。基于抽象调度类针对多线程交错空间进行模糊测试，提高了模糊测试的效率。将RFF和其他多个先进工具在SCTBench和ConVul数据集上进行对比，结果显示RFF能够以更高的效率发现并发错误。
+
+\textbf{关键词：} 并发漏洞；模糊测试；数据约束
 
 \cleardoublepage{}
 \begin{center}
     \bfseries \zihao{3} Abstract
 \end{center}
+
+With the development of computer science, people have more expecation for computer performance. so concurrenct programming models and multi-core processors were naturally proposed. The combination of concurrent programming and multi-core processors accelerates the running speed of the program. But the problem of multi-threaded programs follows, which may cause data problems like data competition. These problem may lead to serious consequences such as program errors or even vulnerabilities. Concurrency vulnerability often requires two or more threads to interleave at a specific location to trigger, which makes it difficult to detect. It can be difficult to reproduce and determine the cause of the vulnerability even if concurrency errors are detected. Current fuzz testing technology can find bugs in programs that require regular input, but current research rarely pays attention to the interleaving of threads.
+% This paper mainly studies the state-of-the-art thechnologies to discover concurrency vulnerabilities.
+
+% \begin{enumerate}
+% \item Interleaving space modeling based on data constraints. Concurrency vulnerabilities often require multiple threads to perform specific reads or writes, so different schedules can be classified through data constraints, which reduces the number of schedules that need to be explored.
+% \item Fuzz testing for concurrency vulnerability spaces. By modeling the interleaving space, schedules are generated. The fuzzer uses these schedules to run multi-threaded programs and get feedback (whether there are bugs, running information, etc.)
+% \end{enumerate}
+
+Based on technologies such as data constraints and fuzz testing, this paper implements the current state-of-the-art tool RFF for detecting concurrency vulnerabilities. This tool uses data constraints to construct schedule class for multi-threaded programs that will satisfy the same constraints, which reduce the size of the multi-threaded interleaving space that needs to be explored.
+Based on the abstract scheduling class, fuzz testing is performed for multi-thread interleaved space, which improves the efficiency of fuzz testing. RFF is compared with multiple other advanced tools on SCTBench and ConVul datasets, and the results show that RFF can find concurrency errors with greater efficiency.
+
+\textbf{Key words: } concurrency vulneralbilities, fuzz testing, data constrain
