@@ -113,15 +113,12 @@
   year={2022},
   publisher={ACM New York, NY}
 }
-@article{burckhardt2010randomized,
+@inproceedings{burckhardt2010randomized,
   title={A randomized scheduler with probabilistic guarantees of finding bugs},
   author={Burckhardt, Sebastian and Kothari, Pravesh and Musuvathi, Madanlal and Nagarakatte, Santosh},
-  journal={ACM SIGARCH Computer Architecture News},
-  volume={38},
-  number={1},
+  booktitle={Proceedings of the fifteenth International Conference on Architectural support for programming languages and operating systems},
   pages={167--178},
-  year={2010},
-  publisher={ACM New York, NY, USA}
+  year={2010}
 }
 @inproceedings{nagarakatte2012multicore,
   title={Multicore acceleration of priority-based schedulers for concurrency bug detection},
@@ -274,4 +271,156 @@
   pages={427--440},
   year={2021},
   organization={Springer}
+}
+@article{adve2010data,
+  title={Data races are evil with no exceptions: technical perspective},
+  author={Adve, Sarita},
+  journal={Communications of the ACM},
+  volume={53},
+  number={11},
+  pages={84--84},
+  year={2010},
+  publisher={ACM New York, NY, USA}
+}
+@inproceedings{boehm2012nondeterminism,
+  title={Nondeterminism is Unavoidable, but Data Races are Pure Evil},
+  author={Boehm, Hans-J},
+  booktitle={Races workshop},
+  year={2012}
+}
+@inproceedings{musuvathi2008finding,
+  title={Finding and Reproducing Heisenbugs in Concurrent Programs.},
+  author={Musuvathi, Madanlal and Qadeer, Shaz and Ball, Thomas and Basler, Gerard and Nainar, Piramanayagam Arumuga and Neamtiu, Iulian},
+  booktitle={OSDI},
+  volume={8},
+  number={2008},
+  year={2008}
+}
+@misc{githubGitHubGoogleAFL,
+  author = {},
+  title = {American fuzzy lop(AFL)},
+  howpublished = {\url{https://github.com/google/AFL}},
+  year = {},
+  note = {[Accessed 20-05-2024]},
+}
+@inproceedings{bohme2016coverage,
+  title={Coverage-based greybox fuzzing as markov chain},
+  author={B{\"o}hme, Marcel and Pham, Van-Thuan and Roychoudhury, Abhik},
+  booktitle={Proceedings of the 2016 ACM SIGSAC Conference on Computer and Communications Security},
+  pages={1032--1043},
+  year={2016}
+}
+@book{godefroid1996partial,
+  title={Partial-order methods for the verification of concurrent systems: an approach to the state-explosion problem},
+  author={Godefroid, Patrice},
+  year={1996},
+  publisher={Springer}
+}
+@inproceedings{blazytko2019grimoire,
+  title={$\{$GRIMOIRE$\}$: Synthesizing structure while fuzzing},
+  author={Blazytko, Tim and Bishop, Matt and Aschermann, Cornelius and Cappos, Justin and Schl{\"o}gel, Moritz and Korshun, Nadia and Abbasi, Ali and Schweighauser, Marco and Schinzel, Sebastian and Schumilo, Sergej and others},
+  booktitle={28th USENIX Security Symposium (USENIX Security 19)},
+  pages={1985--2002},
+  year={2019}
+}
+@inproceedings{godefroid2020intelligent,
+  title={Intelligent REST API data fuzzing},
+  author={Godefroid, Patrice and Huang, Bo-Yuan and Polishchuk, Marina},
+  booktitle={Proceedings of the 28th ACM joint meeting on European software engineering conference and symposium on the foundations of software engineering},
+  pages={725--736},
+  year={2020}
+}
+@article{pham2019smart,
+  title={Smart greybox fuzzing},
+  author={Pham, Van-Thuan and B{\"o}hme, Marcel and Santosa, Andrew E and C{\u{a}}ciulescu, Alexandru R{\u{a}}zvan and Roychoudhury, Abhik},
+  journal={IEEE Transactions on Software Engineering},
+  volume={47},
+  number={9},
+  pages={1980--1997},
+  year={2019},
+  publisher={IEEE}
+}
+@inproceedings{ba2022efficient,
+  title={Efficient greybox fuzzing to detect memory errors},
+  author={Ba, Jinsheng and Duck, Gregory J and Roychoudhury, Abhik},
+  booktitle={Proceedings of the 37th IEEE/ACM International Conference on Automated Software Engineering},
+  pages={1--12},
+  year={2022}
+}
+@inproceedings{gao2021scalable,
+  title={Scalable fuzzing of program binaries with E9AFL},
+  author={Gao, Xiang and Duck, Gregory J and Roychoudhury, Abhik},
+  booktitle={2021 36th IEEE/ACM International Conference on Automated Software Engineering (ASE)},
+  pages={1247--1251},
+  year={2021},
+  organization={IEEE}
+}
+@inproceedings{jeon2020fuzzan,
+  title={$\{$FuZZan$\}$: Efficient sanitizer metadata design for fuzzing},
+  author={Jeon, Yuseok and Han, WookHyun and Burow, Nathan and Payer, Mathias},
+  booktitle={2020 USENIX Annual Technical Conference (USENIX ATC 20)},
+  pages={249--263},
+  year={2020}
+}
+@inproceedings{gao2023probabilistic,
+  title={Probabilistic Concurrency Testing for Weak Memory Programs},
+  author={Gao, Mingyu and Chakraborty, Soham and Ozkan, Burcu Kulahcioglu},
+  booktitle={Proceedings of the 28th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 2},
+  pages={603--616},
+  year={2023}
+}
+@inproceedings{luo2021c11tester,
+  title={C11Tester: a race detector for C/C++ atomics},
+  author={Luo, Weiyu and Demsky, Brian},
+  booktitle={Proceedings of the 26th ACM International Conference on Architectural Support for Programming Languages and Operating Systems},
+  pages={630--646},
+  year={2021}
+}
+@article{ozkan2018randomized,
+  title={Randomized testing of distributed systems with probabilistic guarantees},
+  author={Ozkan, Burcu Kulahcioglu and Majumdar, Rupak and Niksic, Filip and Befrouei, Mitra Tabaei and Weissenbacher, Georg},
+  journal={Proceedings of the ACM on Programming Languages},
+  volume={2},
+  number={OOPSLA},
+  pages={1--28},
+  year={2018},
+  publisher={ACM New York, NY, USA}
+}
+@article{ozkan2019trace,
+  title={Trace aware random testing for distributed systems},
+  author={Ozkan, Burcu Kulahcioglu and Majumdar, Rupak and Oraee, Simin},
+  journal={Proceedings of the ACM on Programming Languages},
+  volume={3},
+  number={OOPSLA},
+  pages={1--29},
+  year={2019},
+  publisher={ACM New York, NY, USA}
+}
+@inproceedings{yuan2020effective,
+  title={Effective concurrency testing for distributed systems},
+  author={Yuan, Xinhao and Yang, Junfeng},
+  booktitle={Proceedings of the Twenty-Fifth International Conference on Architectural Support for Programming Languages and Operating Systems},
+  pages={1141--1156},
+  year={2020}
+}
+@misc{figshareGreyboxFuzzing,
+  author = {},
+  title = {{G}reybox {F}uzzing for {C}oncurrency {T}esting --- figshare.com},
+  howpublished = {\url{https://figshare.com/articles/conference_contribution/Greybox_Fuzzing_for_Concurrency_Testing/23911299}},
+  year = {},
+  note = {[Accessed 31-05-2024]},
+}
+@misc{wikipediaRaceCondition,
+  author = {},
+  title = {{R}ace condition - {W}ikipedia --- en.wikipedia.org},
+  howpublished = {\url{https://en.wikipedia.org/wiki/Race_condition}},
+  year = {},
+  note = {[Accessed 31-05-2024]},
+}
+@misc{cvedetailsSecurityVulnerability,
+  author = {},
+  title = {{C}{V}{E} security vulnerability database. {S}ecurity vulnerabilities, exploits, references and more --- cvedetails.com},
+  howpublished = {\url{https://www.cvedetails.com/}},
+  year = {},
+  note = {[Accessed 31-05-2024]},
 }
