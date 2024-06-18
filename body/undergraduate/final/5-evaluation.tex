@@ -2,7 +2,7 @@
 
 \section{实验与结果分析}
 
-基于第3节所描述的四个系统，我们复现了所有的四个工具\footnote{主要基于开源仓库\cite{figshareGreyboxFuzzing}开发}，并将其集成在一个统一的平台上。然后我们将这些工具在46个基准程序上进行测试，所涉及到的并发漏洞包括断言违规，死锁，内存读写错误等。
+基于第3节所描述的四个系统，我们学习了所有的四个工具\footnote{主要基于开源仓库\cite{figshareGreyboxFuzzing}开发}，然后实现了这几个工具，并将其集成在一个统一的平台上。然后我们将这些工具在46个基准程序上进行测试，所涉及到的并发漏洞包括断言违规，死锁，内存读写错误等。
 
 然后我们对四个系统进行实际的测试，运行了30个小时，得到最终的结果。获得数据后对结果进行处理，然后手动分析了各个工具在49个基准测试上挖掘出来的漏洞的真实性，这耗费了约20个小时。在此基础上，我们从几个系统性的维度对实验结果进行分析，这几个角度分别是：
 
@@ -15,11 +15,35 @@
 
 通过对这些问题的分析，我们比较了各个工具的优劣，得到了它们具体的优势所在。通过对比分析各个系统的特性，我们系统地对各个技术以及其如何导致最终结果进行了完整深入地分析，并得到了一系列的结论。
 
+然后我们将RFF应用到6个大型程序中，这些程序的代码行数是原本两个基准程序所有行数的14倍，平均每个程序增加7万行的测试代码。并使用SFuzz提升挖掘漏洞能力。
+
 \subsection{实验配置}
 
-\paragraph{基准}实验基于两个基准测试。分别是SCTBench\cite{githubGitHubMcimperialsctbench, wen2022controlled}和ConVul\cite{cai2019detecting}。选择这两个基准测试的原因是他们能够覆盖大多数的情况，包括漏洞的类型、软件的种类等。SCTBench结合了之前一些其他的基准测试，包括压缩工具\cite{yu2009case}、web引擎\cite{jalbert2011radbench}、并行数值计算等方面的软件。这些各种各样的软件，均利用了多线程的机制，其中不乏有超过几千行代码的软件，这些软件利用多线程的机制实现了复杂的操作，其中存在着并发漏洞。当工具对这些程序进行测试的时候，需要在复杂的代码逻辑中找到漏洞的位置，这对于工具的有效性提出了很高的要求，进而可以测试工具在挖掘并发漏洞方面的有效性。ConVul基准测试则包含了十个真实世界应用程序的并发漏洞。
+\paragraph{基准}实验基于两个基准测试。分别是SCTBench\cite{githubGitHubMcimperialsctbench, wen2022controlled}和ConVul\cite{cai2019detecting}。选择这两个基准测试的原因是他们能够覆盖大多数的情况，包括漏洞的类型、软件的种类等。SCTBench结合了之前一些其他的基准测试，包括压缩工具\cite{yu2009case}、web引擎\cite{jalbert2011radbench}、并行数值计算等方面的软件。这些各种各样的软件，均利用了多线程的机制，其中不乏有超过几千行代码的软件，这些软件利用多线程的机制实现了复杂的操作，其中存在着并发漏洞。当工具对这些程序进行测试的时候，需要在复杂的代码逻辑中找到漏洞的位置，这对于工具的有效性提出了很高的要求，进而可以测试工具在挖掘并发漏洞方面的有效性。ConVul基准测试则包含了十个真实世界应用程序的并发漏洞。在此基础上我们还收集了6个真实世界的程序，如，平均每个程序的测试代码相比与SCTBench和ConVul增加7万行，以测试RFF在真实世界的大型应用中是否仍然可以迅速挖掘到并发漏洞。
 
-\paragraph{对比工具}为了验证RFF和当前最先进的并发漏洞测试工具的能力，实验将RFF和PERIOD\cite{wen2022controlled}，PCT\cite{burckhardt2010randomized} ，GenMC\cite{kokologiannakis2019model, kokologiannakis2021genmc}进行了比较。其中，PERIOD通过将多线程程序进行关键点切片，系统地对并发访问空间进行探索，同时利用linux的基于deadline的任务调度机制，实现了可控的多线程调度。PCT利用了随机的算法生成特定深度的调度来测试程序，保证了检测到并发漏洞的最小概率，我们这里实现了探索深度为3的PCT工具。我们还对RFF进行了切除实验，去除它的关键部分：抽象调度约束和reads-from反馈，我们基于POS算法复现了一个POS工具作为基准。除此以外，我们还实现了一个基于Q-Learning算法的工具，它同样利用到了reads-from relation，来证明RFF利用reads-from relation的方式时有效且成功的。还有一些其他的模糊测试工具例如MUZZ\cite{chen2020muzz}和CONZZER\cite{jiang2022context}，由于无法得到源代码或进行复现，我们没有将其作为基准测试一起进行比较。
+\begin{table}
+\caption{\label{tab:6app}应用程序信息}
+\begin{spacing}{1.5}
+\centering
+\begin{tabular}{lllllll}
+\toprule
+ Programs & Description & Version & LOC \\
+\midrule
+
+xz & Data compression & 5.4.4 & 25K \\
+pigz & Data compression & 2.4 & 6K \\
+pxz & Data compression & 4.999.9beta & 410 \\
+libvpx & Encode and decode videos & 1.41.1 & 310K \\
+libwebp & Encode and decode images & 1.4.0 & 71K \\
+x264 & Encode video streams & 0.164.r3107 & 56K \\
+
+\bottomrule
+\end{tabular}
+\end{spacing}
+\end{table}
+
+
+\paragraph{对比工具}为了验证RFF和当前最先进的并发漏洞测试工具的能力，实验将RFF和PERIOD\cite{wen2022controlled}，PCT\cite{burckhardt2010randomized} ，GenMC\cite{kokologiannakis2019model, kokologiannakis2021genmc}进行了比较。其中，PERIOD通过将多线程程序进行关键点切片，系统地对并发访问空间进行探索，同时利用linux的基于deadline的任务调度机制，实现了可控的多线程调度。PCT利用了随机的算法生成特定深度的调度来测试程序，保证了检测到并发漏洞的最小概率，我们这里实现了探索深度为3的PCT工具。我们还对RFF进行了切除实验，去除它的关键部分：抽象调度约束和reads-from反馈，我们基于POS算法实现了一个POS工具作为基准。除此以外，我们还实现了一个基于Q-Learning算法的工具，它同样利用到了reads-from relation，来证明RFF利用reads-from relation的方式时有效且成功的。还有一些其他的模糊测试工具例如MUZZ\cite{chen2020muzz}和CONZZER\cite{jiang2022context}，由于无法得到源代码或进行实现，我们没有将其作为基准测试一起进行比较。
 
 \paragraph{实验环境}本实验机器环境的CPU为Intel(R) Core(TM) i7-12700 2.10 GHz，软件环境为docker容器中的Ubuntu 20.04操作系统。每一个程序基准程序在将会对应的漏洞挖掘工具上运行5分钟。这个做法和之前的并发测试评估有所不同，这里使用超市而不是有限的调度次数，这样做的理由是，这样能够更加实际地比较每一种工具的开销，这包括工具插桩，调度序列化以及其他复杂的分析。每一个工具的测试都会运行20次得到平均值来考虑结果的方差。
 
@@ -122,6 +146,69 @@ $$
 
 对于每一对$(e_{w_i}, e_{r_i})$，使$rf(e_{r_i})=e_{w_i}$。这里使用一个恒定的负奖励函数来处理观察到的状态行动对。从\autoref{fig:test1}中可以看出，Q-Learning RF在利用reads-from relation来挖掘两个数据集中的并发漏洞时并不像RFF那样有效。相对于RFF总共发现的45个程序的漏洞，它只发现了30个。RFF在30个程序的检测中能够以最少的调度数发现漏洞，而Q-Learning RF在15个程序中以最少的调度数发现漏洞。尽管少于RFF的30个，相比其他几个工具PERIOD、POS、PCT，Q-Learning RF能在更多的程序中以最少的调度数发现漏洞，这可能是由于在部分轨迹上的强化学习，导致Q-Learning不需要多次的测试就能成功挖掘已经学习过的漏洞模式。相比之下，RFF必须在完整的测试之后得到反馈，才能对下一步的测试进行调整。
 
+\subsection{RFF在实际应用中的探索效率分析}
+
+尽管RFF在SCTBench与ConVul这两个数据集上进行了测试，并取得了不错的效果。但是这两个测试集所测试的程序在复杂性上仍有所不足，而真实程序中的并发漏洞往往比较深，需要多条指令在一定的顺序下执行才能成功触发，同时这些指令之间的间隔可能比较远或是在不同的函数中，因此简单的样本测试程序并不足以完全反映这些并发漏洞挖掘工具的真实漏洞挖掘能力。
+
+因此我们收集了多个真实世界中的应用程序，这些程序在复杂性上显著高于原本的样本测试程序，能够有效的检测工具的并发漏洞挖掘能力。
+例如，在原本的测试集中，SCTBench总的代码行数仅为31000行，但是仅在我们收集的程序libvpx中就包含了31万行代码。在一个如此复杂的程序中，线程交错空间非常大，要穷举所有的交错种类并不可能，测试工具必须在探索效率和探索深度方面达到平衡才能有效地挖掘并发漏洞。
+
+我们将RFF应用到pz、pxz、pigz、libvpx、libwebp、x264这六个应用程序中，尝试利用RFF挖掘这六个应用程序的漏洞，最终的结果如\autoref{fig:xz}、\autoref{fig:pxz}、\autoref{fig:pigz}、\autoref{fig:libvpx}、\autoref{fig:libwebp}、\autoref{fig:x264}所示：
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{xz}
+    \caption{\label{fig:xz}xz}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{pxz}
+    \caption{\label{fig:pxz}pxz}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{pigz}
+    \caption{\label{fig:pigz}pigz}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{libvpx}
+    \caption{\label{fig:libvpx}libvpx}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{libwebp}
+    \caption{\label{fig:libwebp}libwebp}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{x264}
+    \caption{\label{fig:x264}x264}
+\end{figure}
+
+在这些测试中，随着测试时间的增加，RFF所探索的路径数量变化不同，在一些程序中可以迅速探索到多个路径，但是在具体路径的探索上可能并不深入，这说明可能在不同的路径中都存在着许多reads-from relation，这种情况下，RFF会对不同的路径进行均匀的探索。而在一些程序上，RFF会专注在一部分的路径上进行探索，这可能因为在这些路径上存在着大量的reads-from relations，进而影响的模糊测试的方向。
+
+\subsection{初始种子对模糊测试的有效性影响评估}
+
+我们在RFF的基础上提出了新的架构，这一架构通过为目标程序生成一个初始种子集合，提升RFF的漏洞挖掘效果。我们在pigz这一个程序上生成了相应的初始种子集合，并将这个测试用例和随机生成的初始种子同时在RFF上进行测试，如\autoref{fig:pigz-crash}、\autoref{fig:pigzmuzz-crash}所示，利用我们的工具生成的初始种子能够在相同时间内引导RFF挖掘到更多的并发漏洞。这也证明了3.5节中的分析，即常规程序输入同样能够影响并发漏洞的模糊测试效率，并且验证了SFuzz所生成的输入的确能够帮助模糊测试挖掘出更多的漏洞。
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{pigz-crash}
+    \caption{\label{fig:pigz-crash}Crashes found in pigz fuzzing}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{pigzmuzz-crash}
+    \caption{\label{fig:pigzmuzz-crash}Crashes found in pigz fuzzing with generated initial seeds}
+\end{figure}
+
 \clearpage
 
 \section{总结与展望}
@@ -156,4 +243,6 @@ $$
 
 \subsection{总结}
 
-本篇文章研究了当前先进的并发漏洞检测工具，基于reads-from relation能够高效反映并发线程的数据流动关系的事实，构建了抽象调度来表示一个具体调度的集合，每个集合中的调度在数据流关系上都是等价的。进而实现了对应的工具RFF以及PERIOD、PCT、POS多个先进工具并进行充分的实验，实验结果显示RFF能够在46个测试程序中发现45个程序的漏洞，而PCT和POS分别只能发现其中39个和38个程序的漏洞。PERIOD可以发现45个程序的漏洞，但是在其中39个程序上检测出漏洞所需要的调度数都比RFF更多，RFF所有程序平均比PERIOD少用73.4\%个调度检测出漏洞。这说明基于reads-from relation的RFF能够以更高的效率挖掘并发漏洞，并在多数情况下都能比其他的工具挖掘出更多的漏洞。
+本篇文章研究了当前先进的并发漏洞检测工具，基于reads-from relation能够高效反映并发线程的数据流动关系的事实，构建了抽象调度来表示一个具体调度的集合，每个集合中的调度在数据流关系上都是等价的。在此基础上实现了对应的工具RFF以及PERIOD、PCT、POS多个先进工具并进行充分的实验，实验结果显示RFF能够以更少的时间在46个测试程序中发现45个程序的漏洞，比其他最好的工具平均少用73.4\%个调度检测出漏洞。实验结果还进一步证明SFuzz所生成的初始种子能够促使模糊测试挖掘到更多的并发漏洞。
+
+% 而PCT和POS分别只能发现其中39个和38个程序的漏洞。PERIOD可以发现45个程序的漏洞，但是在其中39个程序上检测出漏洞所需要的调度数都比RFF更多，RFF所有程序平均比PERIOD少用73.4\%个调度检测出漏洞。这说明基于reads-from relation的RFF能够以更高的效率挖掘并发漏洞，并在多数情况下都能比其他的工具挖掘出更多的漏洞。
